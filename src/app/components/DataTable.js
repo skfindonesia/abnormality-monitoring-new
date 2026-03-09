@@ -52,7 +52,19 @@ export default function DataTable() {
   // Helper function untuk convert date menjadi format YYYY-MM-DD (local time)
   const getDateStringForComparison = useCallback((date) => {
     if (!date) return null;
-    const d = new Date(date);
+    // Handle both string and Date objects
+    let d;
+    if (typeof date === "string") {
+      // Jika sudah format YYYY-MM-DD, return as is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return date;
+      }
+      // Parse string menjadi Date
+      d = new Date(date);
+    } else {
+      d = new Date(date);
+    }
+
     if (isNaN(d.getTime())) return null;
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -160,10 +172,13 @@ export default function DataTable() {
 
           if (rowDateStr) {
             if (startDate && endDate) {
+              // Jika kedua date diisi: tampilkan range
               matchesDate = rowDateStr >= startDate && rowDateStr <= endDate;
-            } else if (startDate) {
-              matchesDate = rowDateStr >= startDate;
-            } else if (endDate) {
+            } else if (startDate && !endDate) {
+              // Jika hanya start date: tampilkan hanya tanggal itu saja
+              matchesDate = rowDateStr === startDate;
+            } else if (endDate && !startDate) {
+              // Jika hanya end date: tampilkan sampai tanggal itu
               matchesDate = rowDateStr <= endDate;
             }
           } else {
@@ -283,8 +298,15 @@ export default function DataTable() {
     setTimeout(() => {
       setSearchQuery(tempSearchQuery);
       setSelectedIPD(tempSelectedIPD);
-      setStartDate(tempStartDate);
-      setEndDate(tempEndDate);
+      // Normalize dates to YYYY-MM-DD format
+      const normalizedStartDate = tempStartDate
+        ? getDateStringForComparison(tempStartDate)
+        : "";
+      const normalizedEndDate = tempEndDate
+        ? getDateStringForComparison(tempEndDate)
+        : "";
+      setStartDate(normalizedStartDate || "");
+      setEndDate(normalizedEndDate || "");
       setSelectedStatus(tempSelectedStatus);
       setCurrentPage(1);
       setPageLoading(false);
@@ -295,6 +317,7 @@ export default function DataTable() {
     tempStartDate,
     tempEndDate,
     tempSelectedStatus,
+    getDateStringForComparison,
   ]);
 
   const clearAllFilters = useCallback(() => {
